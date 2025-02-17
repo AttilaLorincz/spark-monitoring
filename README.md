@@ -3,10 +3,11 @@
 |   |  |
 |-----------|:--------------------------|
 | :exclamation: | As of **May 10th, 2023** This library now supports Azure Databricks Runtimes 11.0 and above (see [Supported configurations](#supported-configurations)). Please note the 11.0 release is not backwards compatible due to the different logging systems used in the Databricks Runtimes. Be sure to use the correct build for your Databricks Runtime.|
+
 | :warning: | This library and GitHub repository are in *maintenance mode*. There are no plans for further releases, and issue support will be best-effort only. For any additional questions regarding this library or the roadmap for monitoring and logging of your Azure Databricks environments, please contact [azure-spark-monitoring-help@databricks.com](mailto:azure-spark-monitoring-help@databricks.com). |
 |   |  |
 
-This repository extends the core monitoring functionality of Azure Databricks to send streaming query event information to Azure Monitor. For more information about using this library to monitor Azure Databricks, see [Monitoring Azure Databricks](https://docs.microsoft.com/azure/architecture/databricks-monitoring)
+This repository extends the core monitoring functionality of Azure Databricks to send streaming query event information to Azure Monitor. For more information about using this library to monitor Azure Databricks, see [Monitoring Azure Databricks](https://learn.microsoft.com/azure/architecture/databricks-monitoring)
 
 The project has the following directory structure:
 
@@ -51,9 +52,10 @@ Before you begin, ensure you have the following prerequisites in place:
 
 To add a new DBR versions, add a new profile in the pom.xml file
 
+
 ## Logging Event Size Limit
 
-This library currently has a size limit per event of 25MB, based on the [Log Analytics limit of 30MB per API Call](https://docs.microsoft.com/rest/api/loganalytics/create-request#data-limits) with additional overhead for formatting. The default behavior when hitting this limit is to throw an exception. This can be changed by modifying the value of `EXCEPTION_ON_FAILED_SEND` in [GenericSendBuffer.java](src/spark-listeners/src/main/java/com/microsoft/pnp/client/GenericSendBuffer.java) to `false`.
+This library currently has a size limit per event of 25MB, based on the [Log Analytics limit of 30MB per API Call](https://learn.microsoft.com/rest/api/loganalytics/create-request#data-limits) with additional overhead for formatting. The default behavior when hitting this limit is to throw an exception. This can be changed by modifying the value of `EXCEPTION_ON_FAILED_SEND` in [GenericSendBuffer.java](src/spark-listeners/src/main/java/com/microsoft/pnp/client/GenericSendBuffer.java) to `false`.
 
 > Note: You will see an error like: `java.lang.RuntimeException: Failed to schedule batch because first message size nnn exceeds batch size limit 26214400 (bytes).` in the Spark logs if your workload is generating logging messages of greater than 25MB, and your workload may not proceed. You can query Log Analytics for this error condition with:
 
@@ -132,6 +134,7 @@ If you do not want to add your Log Analytics workspace id and key into the init 
 
 1. In order to add `x-ms-AzureResourceId` [header](https://docs.microsoft.com/azure/azure-monitor/platform/data-collector-api#request-headers) as part of the http request, modify the following environment
 variables on **/src/scripts/spark-monitoring.sh**.
+
 For instance:
 
 ```bash
@@ -219,7 +222,7 @@ databricks runtime from the [supported configurations section](#supported-config
     docker run -it --rm -v %cd%/sample/spark-sample-job:/spark-sample-job -v "%USERPROFILE%/.m2":/root/.m2 -w /spark-sample-job mcr.microsoft.com/java/maven:8-zulu-debian10 mvn install -P <maven-profile>
     ```
 
-1. Navigate to your Databricks workspace and create a new job, as described [here](https://docs.microsoft.com/azure/databricks/workflows/jobs/jobs#--create-a-job).
+1. Navigate to your Databricks workspace and create a new job, as described [here](https://learn.microsoft.com/azure/databricks/workflows/jobs/jobs#--create-a-job).
 
 1. In the job detail page, set **Type** to `JAR`.
 
@@ -306,7 +309,7 @@ SparkMetric_CL
 | order by TimeGenerated asc nulls last
 ```
 
-> Note: For more details on how to use the saved search queries in [logAnalyticsDeploy.json](/perftools/deployment/loganalytics/logAnalyticsDeploy.json) to understand and troubleshoot performance, see [Observability patterns and metrics for performance tuning](https://docs.microsoft.com/azure/architecture/databricks-monitoring/databricks-observability).
+> Note: For more details on how to use the saved search queries in [logAnalyticsDeploy.json](/perftools/deployment/loganalytics/logAnalyticsDeploy.json) to understand and troubleshoot performance, see [Observability patterns and metrics for performance tuning](https://learn.microsoft.com/azure/architecture/databricks-monitoring/databricks-observability).
 
 ## Filtering
 

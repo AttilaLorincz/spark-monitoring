@@ -8,13 +8,27 @@ The Spark Monitoring Library can generate large volumes of logging and metrics d
 
 > Note: The REGEX value(s) should be surrounded by double quotes as noted in the examples so that the characters in the regular expression(s) are not interpretted by the shell.
 
-## Limiting events in SparkListenerEvent_CL
+## Adding or removing fiels in SparkEvents_CL
 
-You can uncomment and edit the `LA_SPARKLISTENEREVENT_REGEX` environment variable that is included in [spark-monitoring.sh](../src/spark-listeners/scripts/spark-monitoring.sh) to limit the logging to only include events where Event_s matches the regex.
+In SparkLayout.json, you can specify your own template that would be use for logging.  
+The syntax used is the same as in log4j2 JSON Template: https://logging.apache.org/log4j/2.x/manual/json-template-layout.html.  
+As provided in SparkLayout.json, you can also add your own Spark variables, the full list can be found in the Environment tab on the SparkUi
 
-The example below will only log events for `SparkListenerJobStart`, `SparkListenerJobEnd`, or where `org.apache.spark.sql.execution.ui.` is in the event name.
+## Adding or limiting events in SparkListenerEvent_CL
 
-`export LA_SPARKLISTENEREVENT_REGEX="SparkListenerJobEnd|SparkListenerTaskEnd|org\.apache\.spark\.sql\.execution\.ui\..*"`
+You can add/remove listener events that are sent to Azure LA by adding / removing methods in either:
+
+- DatabricksListener.scala
+- DatabricksQueryExecutionListener.scala
+- DatabricksStreamingListener.scala
+- DatabricksStreamingQueryListener.scala
+
+### Events provided in SparkListenerEvent_CL
+
+* org.apache.spark.scheduler.SparkListenerJobStart
+* org.apache.spark.scheduler.SparkListenerJobEnd
+* org.apache.spark.scheduler.SparkListenerApplicationStart
+* org.apache.spark.scheduler.SparkListenerApplicationEnd
 
 ### Finding Event Names in Azure Monitor
 
@@ -24,23 +38,6 @@ SparkListenerEvent_CL
 | project TimeGenerated, Event_s
 | summarize Count=count() by tostring(Event_s), bin(TimeGenerated, 1d)
 ```
-
-### Events Noted in SparkListenerEvent_CL
-
-* SparkListenerExecutorAdded
-* SparkListenerBlockManagerAdded
-* org.apache.spark.sql.streaming.StreamingQueryListener$QueryStartedEvent
-* org.apache.spark.sql.execution.ui.SparkListenerSQLExecutionStart
-* org.apache.spark.sql.execution.ui.SparkListenerSQLExecutionEnd
-* org.apache.spark.sql.execution.ui.SparkListenerDriverAccumUpdates
-* org.apache.spark.sql.streaming.StreamingQueryListener$QueryTerminatedEvent
-* SparkListenerJobStart
-* SparkListenerStageSubmitted
-* SparkListenerTaskStart
-* SparkListenerTaskEnd
-* org.apache.spark.sql.streaming.StreamingQueryListener$QueryProgressEvent
-* SparkListenerStageCompleted
-* SparkListenerJobEnd
 
 ## Limiting Metrics in SparkMetric_CL
 
@@ -82,27 +79,34 @@ SparkMetric_CL
 
 ## Limiting Logs in SparkLoggingEvent_CL (Basic)
 
-The logs that propagate to SparkLoggingEvent_CL do so through a log4j appender.  This can be configured by altering the spark-monitoring.sh script that is responsible for writing the log4j.properties file. The script at [spark-monitoring.sh](../src/spark-listeners/scripts/spark-monitoring.sh) can be modified to set the threshold for events to be forwarded.  A commented example is included in the script.
+The logs that propagate to SparkLoggingEvent_CL do so through a log4j2 appender.
+This can be configured by altering the spark-monitoring.sh script that is responsible for writing the log4j2.xml file.
+The script at [spark-monitoring.sh](../src/scripts/spark-monitoring.sh) can be modified to set the threshold for events to be forwarded.
+A commented example is included in the script.
 
-```bash
-# Commented line below shows how to set the threshhold for logging to only capture events that are
-# level ERROR or more severe.
-# log4j.appender.logAnalyticsAppender.Threshold=ERROR
+```xml
+        <!-- Commented line below shows how to restrict the logs pushed to Log Analytics to ERROR level or more severe. -->
+        <!-- <ThresholdFilter level="ERROR" /> -->
 ```
 
 ## Limiting Logs in SparkLoggingEvent_CL (Advanced)
 
-You can uncomment and edit the `LA_SPARKLOGGINGEVENT_NAME_REGEX` environment variable that is included in [spark-monitoring.sh](../src/spark-listeners/scripts/spark-monitoring.sh) to limit the logging to only include events where logger_name_s matches the regex.
+You can use the `LA_SPARKLOGGINGEVENT_NAME_REGEX` environment variable
+which is used in [spark-monitoring.sh](../src/scripts/spark-monitoring.sh) to update the log4j2.xml configuration 
+to limit the logging to only include events where `logger_name_s` matches the regex.
 
-The example below will only log events from logger `com.microsoft.pnp.samplejob.StreamingQueryListenerSampleJob` or where the logger name starts with `org.apache.spark.util.Utils`.
+The example below will only log events from logger `com.microsoft.pnp.samplejob.StreamingQueryListenerSampleJob`
+or where the logger name starts with `org.apache.spark.util.Utils`.
 
 `export LA_SPARKLOGGINGEVENT_NAME_REGEX="com\.microsoft\.pnp\.samplejob\.StreamingQueryListenerSampleJob|org\.apache\.spark\.util\.Utils.*"`
 
-You can uncomment and edit the `LA_SPARKLOGGINGEVENT_MESSAGE_REGEX` environment variable that is included in [spark-monitoring.sh](../src/spark-listeners/scripts/spark-monitoring.sh) to limit the logging to only include events where the message matches the regex.
+You can use the `LA_SPARKLOGGINGEVENT_MESSAGE_REGEX` environment variable
+that is used in [spark-monitoring.sh](../src/scripts/spark-monitoring.sh) to update the log4j2.xml configuration 
+to limit the logging to only include events where the message matches the regex.
 
-The example below will only log events where the message ends with the string `StreamingQueryListenerSampleJob` or begins with the string `FS_CONF_COMPAT`.
+The example below will only log events where the message begins with the string `FS_CONF_COMPAT`.
 
-`export LA_SPARKLOGGINGEVENT_MESSAGE_REGEX=".*StreamingQueryListenerSampleJob|FS_CONF_COMPAT.*"`
+`export LA_SPARKLOGGINGEVENT_MESSAGE_REGEX="FS_CONF_COMPAT.*"`
 
 ## Performance Considerations
 

@@ -1,7 +1,9 @@
 # Monitoring Azure Databricks in an Azure Log Analytics Workspace
+
 |   |  |
 |-----------|:--------------------------|
-| :exclamation: | This branch of the library supports Azure Databricks Runtimes 10.x (Spark 3.2.x) and earlier (see [Supported configurations](#supported-configurations)).<br/>Databricks has contributed an updated version to support Azure Databricks Runtimes 11.0 (Spark 3.3.x) and above on the `l4jv2` branch at: https://github.com/mspnp/spark-monitoring/tree/l4jv2.<br/>Be sure to use the correct branch and version for your Databricks Runtime. |
+| :exclamation: | As of **May 10th, 2023** This library now supports Azure Databricks Runtimes 11.0 and above (see [Supported configurations](#supported-configurations)). Please note the 11.0 release is not backwards compatible due to the different logging systems used in the Databricks Runtimes. Be sure to use the correct build for your Databricks Runtime.|
+
 | :warning: | This library and GitHub repository are in *maintenance mode*. There are no plans for further releases, and issue support will be best-effort only. For any additional questions regarding this library or the roadmap for monitoring and logging of your Azure Databricks environments, please contact [azure-spark-monitoring-help@databricks.com](mailto:azure-spark-monitoring-help@databricks.com). |
 |   |  |
 
@@ -11,16 +13,14 @@ The project has the following directory structure:
 
 ```shell
 /src
-    /spark-listeners-loganalytics
-    /spark-listeners
-    /pom.xml
+/pom.xml
 /sample
     /spark-sample-job
 /perftools
      /spark-sample-job
 ```
 
-The **spark-listeners-loganalytics** and **spark-listeners** directories contain the code for building the two JAR files that are deployed to the Databricks cluster. The **spark-listeners** directory includes a **scripts** directory that contains a cluster node initialization script to copy the JAR files from a staging directory in the Azure Databricks file system to execution nodes. The **pom.xml** file is the main Maven project object model build file for the entire project.
+The **src** directory contains the code for building the JAR file that are deployed to the Databricks cluster. The **src** directory includes a **scripts** directory that contains a cluster node initialization script to copy the JAR file from a staging directory in the Azure Databricks file system to execution nodes. The **pom.xml** file is the main Maven project object model build file for the entire project.
 
 The **spark-sample-job** directory is a sample Spark application demonstrating how to implement a Spark application metric counter.
 
@@ -30,10 +30,10 @@ The **perftools** directory contains details on how to use Azure Monitor with Gr
 
 Before you begin, ensure you have the following prerequisites in place:
 
-* Clone or download this GitHub repository.
-* An active Azure Databricks workspace. For instructions on how to deploy an Azure Databricks workspace, see [get started with Azure Databricks](https://learn.microsoft.com/azure/databricks/getting-started/).
-* Install the [Azure Databricks CLI](https://learn.microsoft.com/azure/databricks/dev-tools/cli/install).
-  * An Azure Databricks personal access token or Microsoft Entra access token is required to use the CLI. For instructions, see [Set up authentication](https://learn.microsoft.com/azure/databricks/dev-tools/cli/authentication).
+* Clone this GitHub repository and switch to this branch (`git switch l4jv2`).
+* An active Azure Databricks workspace. For instructions on how to deploy an Azure Databricks workspace, see [get started with Azure Databricks.](https://learn.microsoft.com/en-us/azure/databricks/getting-started/#use-the-portal-to-create-an-azure-databricks-workspace).
+* Install the [Azure Databricks CLI](https://learn.microsoft.com/en-us/azure/databricks/dev-tools/cli/databricks-cli#install-the-cli).
+  * Authentication is required to use the CLI. Set up one of the unified authentication methods, such as Azure Databricks personal access token authentication. For instructions, see [Set up authentication](https://learn.microsoft.com/en-us/azure/databricks/dev-tools/cli/databricks-cli#--set-up-authentication).
   * You can also use the Azure Databricks CLI from the Azure Cloud Shell.
 * A Java IDE, with the following resources:
   * [Java Development Kit (JDK) version 1.8](https://www.oracle.com/technetwork/java/javase/downloads/index.html)
@@ -44,10 +44,14 @@ Before you begin, ensure you have the following prerequisites in place:
 
 | Databricks Runtime(s) | Maven Profile |
 | -- | -- |
-| `7.3 LTS` | `scala-2.12_spark-3.0.1` |
-| `9.1 LTS` | `scala-2.12_spark-3.1.2` |
-| `10.3` - `10.5` | `scala-2.12_spark-3.2.1` |
-| `11.0` | See https://github.com/mspnp/spark-monitoring/tree/l4jv2 |
+| `11.3LTS` | `dbr-11.3-lts` |  
+| `12.2LTS` | `dbr-12.2-lts` |
+| `13.3LTS` | `dbr-13.3-lts` |  
+| `14.3LTS` | `dbr-14.3-lts` |  
+| `15.4LTS` | `dbr-15.4-lts` |  
+
+To add a new DBR versions, add a new profile in the pom.xml file
+
 
 ## Logging Event Size Limit
 
@@ -67,9 +71,7 @@ You can build the library using either Docker or Maven.  All commands are intend
 
 The jar files that will be produced are:
 
-**`spark-listeners_<Spark Version>_<Scala Version>-<Version>.jar`** - This is the generic implementation of the Spark Listener framework that provides capability for collecting data from the running cluster for forwarding to another logging system.
-
-**`spark-listeners-loganalytics_<Spark Version>_<Scala Version>-<Version>.jar`** - This is the specific implementation that extends **spark-listeners**.  This project provides the implementation for connecting to Log Analytics and formatting and passing data via the Log Analytics API.
+**`spark-monitoring_<Version>.jar`** - This is the implementation of the Spark Listener framework that provides capability for collecting data from the running cluster for forwarding to another logging system.
 
 ### Option 1: Docker
 
@@ -81,8 +83,8 @@ docker run -it --rm -v `pwd`:/spark-monitoring -v "$HOME/.m2":/root/.m2 mcr.micr
 ```
 
 ```bash
-# To build a single profile (example for latest long term support version 10.4 LTS):
-docker run -it --rm -v `pwd`:/spark-monitoring -v "$HOME/.m2":/root/.m2 -w /spark-monitoring/src mcr.microsoft.com/java/maven:8-zulu-debian10 mvn install -P "scala-2.12_spark-3.2.1"
+# To build a single profile (example for latest long term support version 13.3 LTS):
+docker run -it --rm -v `pwd`:/spark-monitoring -v "$HOME/.m2":/root/.m2 mcr.microsoft.com/java/maven:8-zulu-debian10 mvn install -P "dbr-13.3-lts"
 ```
 
 Windows:
@@ -93,37 +95,35 @@ docker run -it --rm -v %cd%:/spark-monitoring -v "%USERPROFILE%/.m2":/root/.m2 m
 ```
 
 ```bash
-# To build a single profile (example for latest long term support version 10.4 LTS):
-docker run -it --rm -v %cd%:/spark-monitoring -v "%USERPROFILE%/.m2":/root/.m2 -w /spark-monitoring/src mcr.microsoft.com/java/maven:8-zulu-debian10 mvn install -P "scala-2.12_spark-3.2.1"
+# To build a single profile (example for latest long term support version 13.3 LTS):
+docker run -it --rm -v %cd%:/spark-monitoring -v "%USERPROFILE%/.m2":/root/.m2 mcr.microsoft.com/java/maven:8-zulu-debian10 mvn install -P "dbr-13.3-lts"
 ```
 
 ### Option 2: Maven
 
-1. Import the Maven project project object model file, _pom.xml_, located in the **/src** folder into your project. This will import two projects:
+1. Import the Maven project object model file, _pom.xml_, located in the **/** folder into your project. This will import the project
 
-    * spark-listeners
-    * spark-listeners-loganalytics
+1. Activate a **single** Maven profile that corresponds to the versions of the DBR version combination that is being used. By default, the DBR version 13.3LTS profile is active.
 
-1. Activate a **single** Maven profile that corresponds to the versions of the Scala/Spark combination that is being used. By default, the Scala 2.12 and Spark 3.0.1 profile is active.
-
-1. Execute the Maven **package** phase in your Java IDE to build the JAR files for each of the these projects:
-
-    |Project| JAR file|
-    |-------|---------|
-    |spark-listeners|`spark-listeners_<Spark Version>_<Scala Version>-<Version>.jar`|
-    |spark-listeners-loganalytics|`spark-listeners-loganalytics_<Spark Version>_<Scala Version>-<Version>.jar`|
+1. Execute the Maven **package** phase in your Java IDE to build the JAR files for the the project:
 
 ## Configure the Databricks workspace
 
-Copy the JAR files and init scripts to Databricks.
+It is recommended to use a Unity Catalog volume as the source of the init script when using compute with shared or single user access mode. Workspace or ABFSS sources are also options. The JAR files can be stored in DBFS or a volume (if using Unity Catalog). Below are the steps for copying init scripts and JAR files to Databricks.
 
-1. Use the Azure Databricks CLI to create a directory named **dbfs:/databricks/spark-monitoring**:
+1. Use the Azure Databricks CLI to create a DBFS directory named **dbfs:/databricks/spark-monitoring** for the JAR:
 
     ```bash
-    dbfs mkdirs dbfs:/databricks/spark-monitoring
+    databricks fs mkdirs dbfs:/databricks/spark-monitoring
     ```
 
-1. Open the **/src/spark-listeners/scripts/spark-monitoring.sh** script file and add your [Log Analytics Workspace ID and Key](https://learn.microsoft.com/azure/azure-monitor/agents/agent-windows#workspace-id-and-key) to the lines below:
+1. Use the Azure Databricks CLI to copy the jar file from the **target/** folder to the directory created in step 3:
+
+    ```bash
+    databricks fs cp --overwrite target/spark-monitoring_1.0.0.jar dbfs:/databricks/spark-monitoring/
+    ```
+
+1. Open the **src/scripts/spark-monitoring.sh** script file and add your [Log Analytics Workspace ID and Key](http://docs.microsoft.com/azure/azure-monitor/platform/agent-windows#obtain-workspace-id-and-key) to the lines below:
 
     ```bash
     export LOG_ANALYTICS_WORKSPACE_ID=
@@ -132,8 +132,9 @@ Copy the JAR files and init scripts to Databricks.
 
 If you do not want to add your Log Analytics workspace id and key into the init script in plaintext, you can also [create an Azure Key Vault backed secret scope](./docs/keyvault-backed-secrets.md) and reference those secrets through your cluster's environment variables.
 
-1. In order to add `x-ms-AzureResourceId` [header](https://learn.microsoft.com/azure/azure-monitor/platform/data-collector-api#request-headers) as part of the http request, modify the following environment
-variables on **/src/spark-listeners/scripts/spark-monitoring.sh**.
+1. In order to add `x-ms-AzureResourceId` [header](https://docs.microsoft.com/azure/azure-monitor/platform/data-collector-api#request-headers) as part of the http request, modify the following environment
+variables on **/src/scripts/spark-monitoring.sh**.
+
 For instance:
 
 ```bash
@@ -147,16 +148,45 @@ export AZ_RSRC_NAME=myDatabricks
 Now the _ResourceId **/subscriptions/11111111-5c17-4032-ae54-fc33d56047c2/resourceGroups/myAzResourceGroup/providers/Microsoft.Databricks/workspaces/myDatabricks** will be part of the header.
 (*Note: If at least one of them is not set the header won't be included.*)
 
-1. Use the Azure Databricks CLI to copy **src/spark-listeners/scripts/spark-monitoring.sh** to the directory created in step 3:
+### Upload init script
 
+#### Option 1: Volume init script
+A [volume](https://learn.microsoft.com/en-us/azure/databricks/data-governance/unity-catalog/create-volumes) must already be configured via Unity Catalog. Follow steps below to upload the init script to the volume.
+
+1. Use the Azure Databricks CLI to upload to your volume replacing {catalog}, {schema}, and {volume_name} with your values.
     ```bash
-    dbfs cp src/spark-listeners/scripts/spark-monitoring.sh dbfs:/databricks/spark-monitoring/spark-monitoring.sh
+    databricks fs cp --overwrite src/scripts/spark-monitoring.sh dbfs:/Volumes/{catalog}/{schema}/{volume_name}/spark-monitoring.sh
+    ``````
+
+1. If using Shared access mode, [add the script to the allowlist](https://learn.microsoft.com/en-us/azure/databricks/data-governance/unity-catalog/manage-privileges/allowlist#how-to-add-items-to-the-allowlist).
+
+1. (Optional) If you would like to store the JAR in a volume instead of DBFS, then upload the JAR to the volume and replace the path in `spark-monitoring.sh`.
+
+    To upload the JAR to your volume, run the following command replacing {catalog}, {schema}, and {volume_name} with your values:
+    ```bash
+    databricks fs cp --overwrite target/spark-monitoring_1.0.0.jar dbfs:/Volumes/{catalog}/{schema}/{volume_name}/spark-monitoring_1.0.0.jar
     ```
 
-1. Use the Azure Databricks CLI to copy all of the jar files from the **src/target** folder to the directory created in step 3:
+    In `spark-monitoring.sh`, replace line
+    ```
+    cp -f "$STAGE_DIR/$JAR_FILENAME" /mnt/driver-daemon/jars
+    ```
+    with the following (replacing {catalog}, {schema}, and {volume_name})
+    ```
+    cp -f "/Volumes/{catalog}/{schema}/{volume_name}/$JAR_FILENAME" /mnt/driver-daemon/jars
+    ```
+
+#### Option 2: Workspace init script
+1. Use the Azure Databricks CLI to create a workspace directory named **/databricks/spark-monitoring** for the init script:
 
     ```bash
-    dbfs cp --overwrite --recursive src/target/ dbfs:/databricks/spark-monitoring/
+    databricks workspace mkdirs /databricks/spark-monitoring
+    ```
+
+1. Use the Azure Databricks CLI to copy **src/scripts/spark-monitoring.sh** to the directory created in the previous step:
+
+    ```bash
+    databricks workspace import --overwrite --format "AUTO" --file src/scripts/spark-monitoring.sh /databricks/spark-monitoring/spark-monitoring.sh
     ```
 
 ### Create and configure the Azure Databricks cluster
@@ -164,9 +194,12 @@ Now the _ResourceId **/subscriptions/11111111-5c17-4032-ae54-fc33d56047c2/resour
 1. Navigate to your Azure Databricks workspace in the Azure Portal.
 1. Under "Compute", click "Create Cluster".
 1. Choose a name for your cluster and enter it in "Cluster name" text box.
-1. In the "Databricks Runtime Version" dropdown, select **Runtime: 10.4 LTS (Scala 2.12, Spark 3.2.1)**.
-1. Under "Advanced Options", click on the "Init Scripts" tab. Go to the last line under the "Init Scripts section" Under the "destination" dropdown, select "DBFS". Enter "dbfs:/databricks/spark-monitoring/spark-monitoring.sh" in the text box. Click the "add" button.
-1. Click the "Create Cluster" button to create the cluster. Next, click on the "start" button to start the cluster.
+1. In the "Databricks Runtime Version" dropdown, select **Runtime: 13.3 LTS (Scala 2.12, Spark 3.4.1)**.
+1. Under "Advanced Options", click on the "Spark" tab. Add env variables for LOG_ANALYTICS_WORKSPACE_KEY and LOG_ANALYTICS_WORKSPACE_KEY. Use this step if you haven't set those variables in the init script
+1. Under "Advanced Options", click on the "Init Scripts" tab. Under the "Source" dropdown, select "Workspace" or "Volumes". Enter the path to the init script in the text box. Click the "add" button.
+
+    > Note: If using a cluster with Shared access mode, you cannot use "Workspace" as a source. For Shared mode you also need to [add the script to the allowlist](https://learn.microsoft.com/en-us/azure/databricks/data-governance/unity-catalog/manage-privileges/allowlist).
+1. Click the "Create Compute" button to create the cluster. If the cluster does not start automatically, click on the "Start" button on the cluster page.
 
 ## Run the sample job (optional)
 
@@ -216,7 +249,16 @@ This custom log will contain Spark events that are serialized to JSON. You can l
 
 > Note: There is a known issue when the Spark framework or workload generates events that have more than 500 fields, or where data for an individual field is larger than 32kb. Log Analytics will generate an error indicating that data has been dropped. This is an incompatibility between the data being generated by Spark, and the current limitations of the Log Analytics API.
 
-Example for querying **SparkListenerEvent_CL** for job throughput over the last 7 days:
+### Adding events in SparkListenerEvent_CL
+
+You can add new events by adding new methods in the DatabricksListener class, the methods must override existing methods in the SparkListener interface.
+
+Careful as some of them are extremely verbose and may not be sent in LogAnalytics. This is why you should test the events by running the SparkApp in the sample directory.
+
+
+#### Example
+
+Querying **SparkListenerEvent_CL** for job throughput over the last 7 days:
 
 ```kusto
 let results=SparkListenerEvent_CL
@@ -247,7 +289,7 @@ Example for querying **SparkLoggingEvent_CL** for logged errors over the last da
 ```kusto
 SparkLoggingEvent_CL
 | where TimeGenerated > ago(1d)
-| where Level == "ERROR"
+| where log_level_s == "ERROR"
 ```
 
 #### SparkMetric_CL
